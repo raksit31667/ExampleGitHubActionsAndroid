@@ -1,0 +1,51 @@
+name: Android CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Run Tests
+        run: ./gradlew test
+
+      - name: Build AAB
+        run: ./gradlew bundleRelease
+
+      - name: Upload AAB Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-aab
+          path: app/build/outputs/
+          retention-days: 1
+
+  publish-android:
+    name: Publish Android to Google Play
+    runs-on: ubuntu-latest
+    needs: build-android
+
+    steps:
+      - name: Download Artifact From Build Job
+        uses: actions/download-artifact@v3
+        with:
+          name: release-aab
+
+      - name: Deploy to Google Play (Manual Step)
+        run: echo "Upload the generated AAB via the Google Play Console using API key ${GOOGLE_PLAY_API_KEY_JSON}."
+        env:
+          GOOGLE_PLAY_API_KEY_JSON: ${{ secrets.GOOGLE_PLAY_API_KEY_JSON }}
